@@ -1,16 +1,26 @@
 import sys
 import json
+import operator
+import heapq
 
 def main():
-    sent_file = open(sys.argv[1])
-    tweet_file = open(sys.argv[2])
-    sent_scores = parse_sentiment_scores(sent_file)
+    tweet_file = open(sys.argv[1])
     tweets = parse_tweets(tweet_file)
-    
-    tweet_sentiments = map(lambda tweet: tweet_sentiment(tweet, sent_scores), tweets)
 
-    for sent_score in tweet_sentiments:
-        print sent_score
+    hash_counts = {}
+
+    for tweet in tweets:
+        if "entities" in tweet and "hashtags" in tweet["entities"]:
+            for hashtag in tweet["entities"]["hashtags"]:
+                hashtag_text = hashtag["text"]
+                if not hashtag_text in hash_counts:
+                    hash_counts[hashtag_text] = 0
+                hash_counts[hashtag_text] -= 1
+
+    hash_list = heapq.nsmallest(10, hash_counts.iteritems(), operator.itemgetter(1))
+
+    for tuple in hash_list:
+        print tuple[0] + " " + str(-tuple[1])
 
 def word_map_fn(word_dict, no_match_value=None):
     def word_map(word):
@@ -42,8 +52,14 @@ def tweet_sentiment(tweet, sent_scores):
             (tweet['text'].split() if 'text' in tweet else [0])),
         0)
 
+def not_in_dict_filter_fn(dictionary):
+    def not_in_dict_filter(entry):
+        return not entry in dictionary
+    return not_in_dict_filter
+
 def prn(x):
-    print x
+    print x 
+
 
 if __name__ == '__main__':
     main()
